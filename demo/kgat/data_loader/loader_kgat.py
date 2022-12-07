@@ -18,7 +18,7 @@ class DataLoaderKGAT(DataLoaderBase):
 
         kg_data = self.load_kg(self.kg_file)
         self.construct_data(kg_data)
-        # self.print_info(self.logging)
+        self.print_info(self.logging)
 
         self.laplacian_type = args.laplacian_type
         self.create_adjacency_dict()
