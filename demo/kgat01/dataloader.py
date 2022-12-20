@@ -71,6 +71,8 @@ class DataLoader(BaseLoader):
 
         self.laplacian_dict = self.get_laplacian_dict()
 
+        self.A_in = self.get_A_in()
+
     def load_kg(self, filename):
         kg_data = pd.read_csv(filename, sep=' ', names=['h', 'r', 't'])
         kg_data = kg_data.drop_duplicates()
@@ -156,4 +158,14 @@ class DataLoader(BaseLoader):
         for k, v in self.adjacency_dict.items():
             lap_dict[k] = random_walk_norm_lap(v)
         return lap_dict
-
+    
+    def get_A_in(self):
+        # 矩阵按元素相加 返回sparse tensor类型
+        A_in = sum(self.laplacian_dict.values())
+        A_in = A_in.tocoo()
+        values = A_in.data
+        indices = np.vstack((A_in.row, A_in.col))
+        i = torch.LongTensor(indices)
+        v = torch.FloatTensor(values)
+        shape = A_in.shape
+        return torch.sparse.FloatTensor(i, v, torch.Size(shape))
