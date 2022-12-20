@@ -28,10 +28,10 @@ def logging_config(folder=None, name=None,
     logging.root.setLevel(level)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    # logfile = logging.FileHandler(logpath)
-    # logfile.setLevel(level)
-    # logfile.setFormatter(formatter)
-    # logging.root.addHandler(logfile)
+    logfile = logging.FileHandler(logpath)
+    logfile.setLevel(level)
+    logfile.setFormatter(formatter)
+    logging.root.addHandler(logfile)
 
     if not no_console:
         logconsole = logging.StreamHandler()
