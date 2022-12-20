@@ -21,7 +21,7 @@ def train(args):
 
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
-    t = BaseLoader(args)
+    data = DataLoader(args)
 
 
 if __name__ == "__main__":
