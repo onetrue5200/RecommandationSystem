@@ -59,6 +59,7 @@ class DataLoader(BaseLoader):
 
         self.kg_data = self.load_kg(self.kg_file)
 
+        self.n_relations = max(self.kg_data['r']) + 1
         self.n_entities = max(max(self.kg_data['h']), max(self.kg_data['t'])) + 1
 
         self.train_data = self.get_train_data()
@@ -82,10 +83,9 @@ class DataLoader(BaseLoader):
         kg_data = self.kg_data
 
         # add inverse kg data
-        n_relations = max(kg_data['r']) + 1
         inverse_kg_data = kg_data.copy()
         inverse_kg_data = inverse_kg_data.rename({'h': 't', 't': 'h'}, axis='columns')
-        inverse_kg_data['r'] += n_relations
+        inverse_kg_data['r'] += self.n_relations
         kg_data = pd.concat([kg_data, inverse_kg_data], ignore_index=True)
 
         # re-map user id

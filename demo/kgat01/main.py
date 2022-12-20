@@ -6,6 +6,7 @@ import logging
 from parser import parse_args
 from log_helper import *
 from dataloader import *
+from kgat import *
 
 
 def train(args):
@@ -22,6 +23,12 @@ def train(args):
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     data = DataLoader(args)
+
+    model = KGAT(args, data)
+
+    model.to(device)
+    logging.info(model)
+
 
 
 if __name__ == "__main__":
