@@ -1,4 +1,5 @@
 import os
+import random
 from collections import defaultdict
 import numpy as np
 import pandas as pd
@@ -50,6 +51,41 @@ class BaseLoader():
         users = np.array(users, dtype=np.int32)
         items = np.array(items, dtype=np.int32)
         return [users, items], user_dict
+
+    def sample_pos_items_for_user(self, user_dict, user, n_items):
+        user_items = user_dict[user]
+        sample_items = []
+        while len(sample_items) < n_items:
+            item = random.choice(user_items)
+            if item not in sample_items:
+                sample_items.append(item)
+        return sample_items
+    
+    def sample_neg_items_for_user(self, user_dict, user, n_items):
+        user_items = user_dict[user]
+        sample_items = []
+        while len(sample_items) < n_items:
+            item = np.random.randint(low=0, high=self.n_items, size=1)[0]
+            if item not in user_items and item not in sample_items:
+                sample_items.append(item)
+        return sample_items
+
+
+    def generate_cf_batch(self, user_dict, batch_size):
+        exist_users = user_dict.keys()
+        if batch_size <= len(exist_users):
+            batch_users = random.sample(exist_users, batch_size)
+        else:
+            batch_users = [random.choice(exist_users) for _ in range(batch_size)]
+        batch_pos_items, batch_neg_items = [], []
+        for user in batch_users:
+            batch_pos_items += self.sample_pos_items_for_user(user_dict, user, 1)
+            batch_neg_items += self.sample_neg_items_for_user(user_dict, user, 1)
+        
+        batch_users = torch.LongTensor(batch_users)
+        batch_pos_items = torch.LongTensor(batch_pos_items)
+        batch_neg_items = torch.LongTensor(batch_neg_items)
+        return batch_users, batch_pos_items, batch_neg_items
 
 
 class DataLoader(BaseLoader):

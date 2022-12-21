@@ -3,6 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def _L2_loss_mean(x):
+    return torch.mean(torch.sum(torch.pow(x, 2), dim=1, keepdim=False) / 2.)
+
+
 class Aggregator(nn.Module):
     
     def __init__(self, in_dim, out_dim, dropout, agg_type):
@@ -75,6 +79,38 @@ class KGAT(nn.Module):
                                                     self.args.aggregation_type
                                                 )
                                             )
+    
+    def calc_cf_embeddings(self):
+        """
+        使用embedding计算3层agg后的embedding
+        结果cat起来返回
+        """
+        ego_embedding = self.users_entities_embedding.weight
+        all_embedding = [ego_embedding]
+        for agg in self.aggregator_layers:
+            ego_embedding = agg(ego_embedding, self.A_in)
+            norm_embedding = F.normalize(ego_embedding, p=2, dim=1)
+            all_embedding.append(norm_embedding)
+        
+        return torch.cat(all_embedding, dim=1)
 
+    def calc_cf_loss(self, users, pos_items, neg_items):
+        all_embedding = self.calc_cf_embeddings()
+        
+        users_embedding = all_embedding[users]
+        pos_items_embedding = all_embedding[pos_items]
+        neg_items_embedding = all_embedding[neg_items]
 
+        pos_score = torch.sum(users_embedding * pos_items_embedding, dim=1)
+        neg_score = torch.sum(users_embedding * neg_items_embedding, dim=1)
+
+        cf_loss = torch.mean((-1.0) * F.logsigmoid(pos_score - neg_score))
+        
+        l2_loss = _L2_loss_mean(users_embedding) + _L2_loss_mean(pos_items_embedding) + _L2_loss_mean(neg_items_embedding)
+        loss = cf_loss + self.args.cf_l2loss_lambda * l2_loss
+        return loss
+
+    def forward(self, *input, mode):
+        if mode == "train_cf":
+            return self.calc_cf_loss(*input)
 
