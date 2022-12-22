@@ -100,6 +100,10 @@ class DataLoader(BaseLoader):
 
         self.train_data = self.get_train_data()
 
+        self.n_relations = max(self.train_data['r']) + 1
+
+        self.n_train_data = len(self.train_data)
+
         self.n_users_entities = self.n_users + self.n_entities
 
         self.h_list, self.r_list, self.t_list, self.train_h_dict, self.train_r_dict = self.get_train_dict()
@@ -205,3 +209,46 @@ class DataLoader(BaseLoader):
         v = torch.FloatTensor(values)
         shape = A_in.shape
         return torch.sparse.FloatTensor(i, v, torch.Size(shape))
+    
+    def sample_pos_triples_for_head(self, h_dict, head, n_items):
+        pos_triples = h_dict[head]
+        sample_triples, sample_relations, sample_tails = [], [], []
+        while len(sample_relations) < n_items:
+            triple = random.choice(pos_triples)
+            if triple not in sample_triples:
+                relation, tail = triple
+                sample_triples.append(triple)
+                sample_relations.append(relation)
+                sample_tails.append(tail)
+        return sample_relations, sample_tails
+    
+    def sample_neg_triples_for_head(self, h_dict, head, relation, n_items):
+        pos_triples = h_dict[head]
+        sample_tails = []
+        while len(sample_tails) < n_items:
+            tail = np.random.randint(low=0, high=self.n_users_entities, size=1)[0]
+            if tail not in sample_tails and [relation, tail] not in pos_triples:
+                sample_tails.append(tail)
+        return sample_tails
+    
+    def generate_kg_batch(self, h_dict, batch_size, n_users_entities):
+        exist_heads = h_dict.keys()
+        if batch_size <= len(exist_heads):
+            batch_heads = random.sample(exist_heads, batch_size)
+        else:
+            batch_heads = [random.choice(exist_heads) for _ in range(batch_size)]
+        
+        batch_relations, batch_pos_tails, batch_neg_tails = [], [], []
+        for head in batch_heads:
+            relations, pos_tails = self.sample_pos_triples_for_head(h_dict, head, 1)
+            batch_relations += relations
+            batch_pos_tails += pos_tails
+
+            neg_tails = self.sample_neg_triples_for_head(h_dict, head, relations[0], 1)
+            batch_neg_tails += neg_tails
+        
+        batch_heads = torch.LongTensor(batch_heads)
+        batch_relations = torch.LongTensor(batch_relations)
+        batch_pos_tails = torch.LongTensor(batch_pos_tails)
+        batch_neg_tails = torch.LongTensor(batch_neg_tails)
+        return batch_heads, batch_relations, batch_pos_tails, batch_neg_tails

@@ -109,8 +109,33 @@ class KGAT(nn.Module):
         l2_loss = _L2_loss_mean(users_embedding) + _L2_loss_mean(pos_items_embedding) + _L2_loss_mean(neg_items_embedding)
         loss = cf_loss + self.args.cf_l2loss_lambda * l2_loss
         return loss
+    
+    def calc_kg_loss(self, heads, relations, pos_tails, neg_tails):
+        heads_embedding = self.users_entities_embedding(heads)
+        relations_embedding = self.relations_embedding(relations)
+        pos_tails_embedding = self.users_entities_embedding(pos_tails)
+        neg_tails_embedding = self.users_entities_embedding(neg_tails)
+        trans_M = self.trans_M[relations]
+
+        heads_trans = torch.bmm(heads_embedding.unsqueeze(1), trans_M).squeeze(1)
+        pos_tails_trans = torch.bmm(pos_tails_embedding.unsqueeze(1), trans_M).squeeze(1)
+        neg_tails_trans = torch.bmm(neg_tails_embedding.unsqueeze(1), trans_M).squeeze(1)
+        
+        pos_score = torch.sum(torch.pow(heads_trans + relations_embedding - pos_tails_trans, 2), dim=1)
+        neg_score = torch.sum(torch.pow(heads_trans + relations_embedding - neg_tails_trans, 2), dim=1)
+        
+        kg_loss = torch.mean((-1.0) * F.logsigmoid(neg_score - pos_score))
+
+        l2_loss = _L2_loss_mean(heads_trans)\
+                  +_L2_loss_mean(relations_embedding)\
+                  + _L2_loss_mean(pos_tails_embedding)\
+                  + _L2_loss_mean(neg_tails_embedding)
+        loss = kg_loss + self.args.kg_l2loss_lambda * l2_loss
+        return loss
 
     def forward(self, *input, mode):
         if mode == "train_cf":
             return self.calc_cf_loss(*input)
+        if mode == "train_kg":
+            return self.calc_kg_loss(*input)
 

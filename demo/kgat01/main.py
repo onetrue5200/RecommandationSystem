@@ -74,7 +74,30 @@ def train(args):
             logging.info('CF Training: Epoch {:04d} Iter {:04d} / {:04d} | Time {:.1f}s | Iter Loss {:.4f} | Iter Mean Loss {:.4f}'.format(epoch, iter, n_cf_batch, time.time() - time2, cf_batch_loss.item(), cf_total_loss / iter))
         logging.info('CF Training: Epoch {:04d} Total Iter {:04d} | Total Time {:.1f}s | Iter Mean Loss {:.4f}'.format(epoch, n_cf_batch, time.time() - time1, cf_total_loss / n_cf_batch))
 
+        # train kg
+        time3 = time.time()
+        kg_total_loss = 0
+        n_kg_batch = data.n_train_data // args.kg_batch_size + 1
+        for iter in range(1, n_kg_batch + 1):
+            time4 = time.time()
 
+            kg_batch_heads, kg_batch_relations, kg_batch_pos_tails, kg_batch_neg_tails = data.generate_kg_batch(data.train_h_dict, args.kg_batch_size, data.n_users_entities)
+            kg_batch_heads = kg_batch_heads.to(device)
+            kg_batch_relations = kg_batch_relations.to(device)
+            kg_batch_pos_tails = kg_batch_pos_tails.to(device)
+            kg_batch_neg_tails = kg_batch_neg_tails.to(device)
+
+            kg_batch_loss = model(kg_batch_heads, kg_batch_relations, kg_batch_pos_tails, kg_batch_neg_tails, mode='train_kg')
+
+            kg_batch_loss.backward()
+
+            kg_optimizer.zero_grad()
+            kg_optimizer.step()
+
+            kg_total_loss += kg_batch_loss.item()
+
+            logging.info('KG Training: Epoch {:04d} Iter {:04d} / {:04d} | Time {:.1f}s | Iter Loss {:.4f} | Iter Mean Loss {:.4f}'.format(epoch, iter, n_kg_batch, time.time() - time4, kg_batch_loss.item(), kg_total_loss / iter))
+        logging.info('KG Training: Epoch {:04d} Total Iter {:04d} | Total Time {:.1f}s | Iter Mean Loss {:.4f}'.format(epoch, n_kg_batch, time.time() - time3, kg_total_loss / n_kg_batch))
 
 
 if __name__ == "__main__":
