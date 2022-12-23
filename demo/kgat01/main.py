@@ -52,52 +52,63 @@ def train(args):
         model.train()
         
         # train cf
-        time1 = time.time()
-        cf_total_loss = 0
-        n_cf_batch = data.n_cf_train // args.cf_batch_size + 1
-        for iter in range(1, n_cf_batch + 1):
-            time2 = time.time()
-            cf_batch_users, cf_batch_pos_items, cf_batch_neg_items = data.generate_cf_batch(data.train_user_dict, args.cf_batch_size)
+        # time1 = time.time()
+        # cf_total_loss = 0
+        # n_cf_batch = data.n_cf_train // args.cf_batch_size + 1
+        # for iter in range(1, n_cf_batch + 1):
+        #     time2 = time.time()
+        #     cf_batch_users, cf_batch_pos_items, cf_batch_neg_items = data.generate_cf_batch(data.train_user_dict, args.cf_batch_size)
 
-            cf_batch_users = cf_batch_users.to(device)
-            cf_batch_pos_items = cf_batch_pos_items.to(device)
-            cf_batch_neg_items = cf_batch_neg_items.to(device)
+        #     cf_batch_users = cf_batch_users.to(device)
+        #     cf_batch_pos_items = cf_batch_pos_items.to(device)
+        #     cf_batch_neg_items = cf_batch_neg_items.to(device)
             
-            cf_batch_loss = model(cf_batch_users, cf_batch_pos_items, cf_batch_neg_items, mode='train_cf')
-            cf_batch_loss.backward()
+        #     cf_batch_loss = model(cf_batch_users, cf_batch_pos_items, cf_batch_neg_items, mode='train_cf')
+        #     cf_batch_loss.backward()
 
-            cf_optimizer.zero_grad()
-            cf_optimizer.step()
+        #     cf_optimizer.zero_grad()
+        #     cf_optimizer.step()
 
-            cf_total_loss += cf_batch_loss.item()
+        #     cf_total_loss += cf_batch_loss.item()
             
-            logging.info('CF Training: Epoch {:04d} Iter {:04d} / {:04d} | Time {:.1f}s | Iter Loss {:.4f} | Iter Mean Loss {:.4f}'.format(epoch, iter, n_cf_batch, time.time() - time2, cf_batch_loss.item(), cf_total_loss / iter))
-        logging.info('CF Training: Epoch {:04d} Total Iter {:04d} | Total Time {:.1f}s | Iter Mean Loss {:.4f}'.format(epoch, n_cf_batch, time.time() - time1, cf_total_loss / n_cf_batch))
+        #     logging.info('CF Training: Epoch {:04d} Iter {:04d} / {:04d} | Time {:.1f}s | Iter Loss {:.4f} | Iter Mean Loss {:.4f}'.format(epoch, iter, n_cf_batch, time.time() - time2, cf_batch_loss.item(), cf_total_loss / iter))
+        # logging.info('CF Training: Epoch {:04d} Total Iter {:04d} | Total Time {:.1f}s | Iter Mean Loss {:.4f}'.format(epoch, n_cf_batch, time.time() - time1, cf_total_loss / n_cf_batch))
 
         # train kg
-        time3 = time.time()
-        kg_total_loss = 0
-        n_kg_batch = data.n_train_data // args.kg_batch_size + 1
-        for iter in range(1, n_kg_batch + 1):
-            time4 = time.time()
+        # time3 = time.time()
+        # kg_total_loss = 0
+        # n_kg_batch = data.n_train_data // args.kg_batch_size + 1
+        # for iter in range(1, n_kg_batch + 1):
+        #     time4 = time.time()
 
-            kg_batch_heads, kg_batch_relations, kg_batch_pos_tails, kg_batch_neg_tails = data.generate_kg_batch(data.train_h_dict, args.kg_batch_size, data.n_users_entities)
-            kg_batch_heads = kg_batch_heads.to(device)
-            kg_batch_relations = kg_batch_relations.to(device)
-            kg_batch_pos_tails = kg_batch_pos_tails.to(device)
-            kg_batch_neg_tails = kg_batch_neg_tails.to(device)
+        #     kg_batch_heads, kg_batch_relations, kg_batch_pos_tails, kg_batch_neg_tails = data.generate_kg_batch(data.train_h_dict, args.kg_batch_size, data.n_users_entities)
+        #     kg_batch_heads = kg_batch_heads.to(device)
+        #     kg_batch_relations = kg_batch_relations.to(device)
+        #     kg_batch_pos_tails = kg_batch_pos_tails.to(device)
+        #     kg_batch_neg_tails = kg_batch_neg_tails.to(device)
 
-            kg_batch_loss = model(kg_batch_heads, kg_batch_relations, kg_batch_pos_tails, kg_batch_neg_tails, mode='train_kg')
+        #     kg_batch_loss = model(kg_batch_heads, kg_batch_relations, kg_batch_pos_tails, kg_batch_neg_tails, mode='train_kg')
 
-            kg_batch_loss.backward()
+        #     kg_batch_loss.backward()
 
-            kg_optimizer.zero_grad()
-            kg_optimizer.step()
+        #     kg_optimizer.zero_grad()
+        #     kg_optimizer.step()
 
-            kg_total_loss += kg_batch_loss.item()
+        #     kg_total_loss += kg_batch_loss.item()
 
-            logging.info('KG Training: Epoch {:04d} Iter {:04d} / {:04d} | Time {:.1f}s | Iter Loss {:.4f} | Iter Mean Loss {:.4f}'.format(epoch, iter, n_kg_batch, time.time() - time4, kg_batch_loss.item(), kg_total_loss / iter))
-        logging.info('KG Training: Epoch {:04d} Total Iter {:04d} | Total Time {:.1f}s | Iter Mean Loss {:.4f}'.format(epoch, n_kg_batch, time.time() - time3, kg_total_loss / n_kg_batch))
+        #     logging.info('KG Training: Epoch {:04d} Iter {:04d} / {:04d} | Time {:.1f}s | Iter Loss {:.4f} | Iter Mean Loss {:.4f}'.format(epoch, iter, n_kg_batch, time.time() - time4, kg_batch_loss.item(), kg_total_loss / iter))
+        # logging.info('KG Training: Epoch {:04d} Total Iter {:04d} | Total Time {:.1f}s | Iter Mean Loss {:.4f}'.format(epoch, n_kg_batch, time.time() - time3, kg_total_loss / n_kg_batch))
+
+        # update attention
+        time5 = time.time()
+        h_list = data.h_list.to(device)
+        r_list = data.r_list.to(device)
+        t_list = data.t_list.to(device)
+        relations = list(data.laplacian_dict.keys())
+        model(h_list, t_list, r_list, relations, mode='update_att')
+        logging.info('Update Attention: Epoch {:04d} | Total Time {:.1f}s'.format(epoch, time.time() - time5))
+
+        logging.info('CF + KG Training: Epoch {:04d} | Total Time {:.1f}s'.format(epoch, time.time() - time0))
 
 
 if __name__ == "__main__":

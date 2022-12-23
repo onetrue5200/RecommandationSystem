@@ -132,10 +132,50 @@ class KGAT(nn.Module):
                   + _L2_loss_mean(neg_tails_embedding)
         loss = kg_loss + self.args.kg_l2loss_lambda * l2_loss
         return loss
+    
+    def update_attention_batch(self, h_list, t_list, relation):
+        r_embedding = self.relations_embedding.weight[relation]
+        W_r = self.trans_M[relation]
+
+        h_embedding = self.users_entities_embedding.weight[h_list]
+        t_embedding = self.users_entities_embedding.weight[t_list]
+
+        h_trans = torch.matmul(h_embedding, W_r)
+        t_trans = torch.matmul(t_embedding, W_r)
+        v_list = torch.sum(t_trans * torch.tanh(h_trans + r_embedding), dim=1)
+        return v_list
+    
+    def update_attention(self, h_list, t_list, r_list, relations):
+        rows, cols, vals = [], [], []
+        for relation in relations:
+            idx_list = torch.where(r_list == relation)
+            batch_h_list = h_list[idx_list]
+            batch_t_list = t_list[idx_list]
+
+            batch_v_list = self.update_attention_batch(batch_h_list, batch_t_list, relation)
+
+            rows.append(batch_h_list)
+            cols.append(batch_t_list)
+            vals.append(batch_v_list)
+        
+        rows = torch.cat(rows)
+        cols = torch.cat(cols)
+        vals = torch.cat(vals)
+
+        shape = self.A_in.shape
+        device = self.A_in.device
+
+        indices = torch.stack([rows, cols])
+        A_in = torch.sparse.FloatTensor(indices, vals, torch.Size(shape))
+
+        A_in = torch.sparse.softmax(A_in.cpu(), dim=1)
+        self.A_in.data = A_in.to(device)
 
     def forward(self, *input, mode):
         if mode == "train_cf":
             return self.calc_cf_loss(*input)
         if mode == "train_kg":
             return self.calc_kg_loss(*input)
+        if mode == "update_att":
+            return self.update_attention(*input)
 
