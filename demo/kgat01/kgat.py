@@ -170,12 +170,23 @@ class KGAT(nn.Module):
 
         A_in = torch.sparse.softmax(A_in.cpu(), dim=1)
         self.A_in.data = A_in.to(device)
+    
+    def calc_score(self, users, items):
+        all_embed = self.calc_cf_embeddings()           # (n_users + n_entities, concat_dim)
+        users_embed = all_embed[users]                # (n_users, concat_dim)
+        items_embed = all_embed[items]                # (n_items, concat_dim)
+
+        # Equation (12)
+        cf_score = torch.matmul(users_embed, items_embed.transpose(0, 1))    # (n_users, n_items)
+        return cf_score
 
     def forward(self, *input, mode):
         if mode == "train_cf":
             return self.calc_cf_loss(*input)
-        if mode == "train_kg":
+        elif mode == "train_kg":
             return self.calc_kg_loss(*input)
-        if mode == "update_att":
+        elif mode == "update_att":
             return self.update_attention(*input)
+        elif mode == "predict":
+            return self.calc_score(*input)
 
